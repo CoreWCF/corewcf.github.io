@@ -32,7 +32,7 @@ This CLR feature isn't available in .NET Core/.NET 5+, so we came up with anothe
     }
 {% endhighlight %}
 
-On Windows, that's all you need to do. Unfortunately on Linux the Windows authentication component is unable to extract the list of roles from the client authentication token, so we need another mechanism to retrieve the list of roles. To do this we use LDAP to connect to the domain controller and make a query for the list of roles that the user has. You initialize the LdapSettings like this:
+On Windows, that's all you need to do. When using Linux the Windows authentication component is unable to extract the list of roles from the client authentication token, so we need another mechanism to retrieve the list of roles. To do this we use LDAP to connect to the domain controller and make a query for the list of roles that the user has. You initialize the LdapSettings like this:
 
 {% highlight csharp %}
 LdapSettings ldapSettings = new LdapSettings("ldap_server.domain.local", "domain.local", "orgunit.domain.local");
