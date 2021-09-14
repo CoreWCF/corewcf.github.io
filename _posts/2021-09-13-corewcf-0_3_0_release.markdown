@@ -108,7 +108,7 @@ As of the 0.2.0 release, CoreWCF differentiated HTTP and HTTPS addresses. If you
 
 #### Added compat support for System.ServiceModel.XmlSerializerFormatAttribute
 
-If you have an existing WCF service contract which you wish to share between CoreWCF and either .NET Framework or .NET Core WCF client, double attributing your contract with both CoreWCF and System.ServiceModel namespaced versions of attributes is messy and error prone. It also requires you to add a reference to CoreWCF in places where it's not needed. To make this scenario easier, CoreWCF already has compat support for many System.ServiceModel attributes. This means CoreWCF understands the System.ServiceModel namespaced versions of the attributes. One ommission from this compat feature was support for System.ServiceModel.XmlSerializerFormatAttribute. Petar Petrov (@petarpetrovt) added compatibility support for this attribute.
+If you have an existing WCF service contract which you wish to share between CoreWCF and either .NET Framework or .NET Core WCF client, double attributing your contract with both CoreWCF and System.ServiceModel namespaced versions of attributes is messy and error prone. It also requires you to add a reference to CoreWCF in places where it's not needed. To make this scenario easier, CoreWCF already has compat support for many System.ServiceModel attributes. This means CoreWCF understands the System.ServiceModel namespaced versions of the attributes. One ommission from this compat feature was support for System.ServiceModel.XmlSerializerFormatAttribute. Guillaume Delahaye (@g7ed6e) added compatibility support for this attribute.
 
 #### Duplex contract support
 
