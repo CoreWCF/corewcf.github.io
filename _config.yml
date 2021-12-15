@@ -31,7 +31,7 @@ theme: minima
 plugins:
   - jekyll-feed
   
-markdown: redcarpet
+markdown: GFM
 permalink: /blog/:year/:month/:day/:title
 
 # Exclude from processing.
