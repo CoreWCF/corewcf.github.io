@@ -1,0 +1,154 @@
+---
+# Layout
+layout: post
+title:  "Introducing WebHttpBinding Support"
+date:   2022-04-13 13:00:00 -0800
+categories: release
+# Author
+author: Jonathan Hope
+---
+#### Introduction
+
+One new feature in the latest CoreWCF release is support for RESTful web APIs. More specifically you should be able to quickly and easily port WCF projects that make use of things like WebGet, WebInvoke, and WebHttpBinding to CoreWCF.
+
+#### Getting Started
+
+While almost all of the code in a project being ported to CoreWCF can remain unchanged; the startup logic and configuration will need to be updated. To demonstrate this we will use a new project. First let's generate a new project: `dotnet new web --no-https --name WebHttp`. Then we'll need to install the CoreWCF.WebHttp package. In the project directory run `dotnet add package CoreWCF.WebHttp`.
+
+We'll want a simple service. First the contract:
+
+```csharp
+[ServiceContract]
+public interface IWebApi
+{
+    [OperationContract]
+    [WebGet(UriTemplate = "/hello")]
+    string PathEcho();
+}
+```
+
+And then the implementation:
+
+```csharp
+public class WebApi : IWebApi
+{
+    public string PathEcho() => "Hello World!";
+}
+```
+
+This should look familiar to you if you've used these parts of WCF before. Swap out all of the startup logic in Program.cs with this:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.AllowSynchronousIO = true;
+    options.ListenLocalhost(8080);
+});
+
+builder.Services.AddServiceModelWebServices();
+
+var app = builder.Build();
+
+app.UseServiceModel(builder =>
+{
+    builder.AddService<WebApi>();
+    builder.AddServiceWebEndpoint<WebApi, IWebApi>("api");
+});
+
+app.Run();
+```
+
+This will look familiar to you if you've used ASP.NET Core before. The CoreWCF specific calls here are AddServiceModelWebServices and UseServiceModel. With that in place go ahead and run the app: `dotnet run`. Once it's running if you navigate to <http://localhost:8080/api/hello> in a browser you will see the response.
+
+#### Documentation
+
+The REST support in WCF would generate help pages about the API if the HelpEnabled setting was enabled on one or more bindings. These days most REST APIs are generally documented with OpenAPI, so in light of this the generated help page in CoreWCF is actually Swagger UI. As an aside the support for OpenAPI here is less robust than it would be in something like ASP.NET Core using the Swashbuckle, but should hopefully be a useful tool regardless. With that out of the way let's explore how to work with it:
+
+First we'll want to enable help for our contract. Change the AddServiceWebEndpoint call to be:
+
+```csharp
+builder.AddServiceWebEndpoint<WebApi, IWebApi>("api", behavior =>
+{
+    behavior.HelpEnabled = true;
+});
+```
+
+Note that this is also how you would configure the WebHttpBehavior for any other reason as well. We'll also need another Nuget package. Add it by running: `dotnet add package Swashbuckle.AspNetCore.SwaggerUI`. Back in the startup we'll need to add something else to services:
+
+```csharp
+builder.Services.AddSingleton(new SwaggerOptions());
+```
+
+And some middleware:
+
+```csharp
+app.UseMiddleware<SwaggerMiddleware>();
+app.UseSwaggerUI();
+```
+
+Now CoreWCF will try and intuit as much information as it can about your API for documentation, but sometimes you will have to feed it information directly. This will be done with attributes. Let's add our first attribute to the service contract:
+
+```csharp
+[OpenApiBasePath("/api")]
+```
+
+This is the same address that the endpoint was registered under in the startup. With all of that done go ahead and run the app, and then navigate to <http://localhost:8080/swagger/> in a browser. There you will see Swagger UI documenting the API, and you can even exercise the API from that page. Let's cover some other documentation related attributes.
+
+If you want to hide something in the documentation you can do so like:
+
+```csharp
+[OpenApiHidden]
+```
+
+If you want something to be under a particular tag you can do so like:
+
+```csharp
+[OpenApiTag("")]
+```
+
+If you want to add a description and/or summary to an operation you can do so like:
+
+```csharp
+[OpenApiOperation(Description = "", Summary = "")]
+```
+
+If you want to add a description and/or supported content type to a parameter you can do so like:
+
+```csharp
+[OpenApiParameter(ContentTypes = new[] { ""}, Description = "")]
+```
+
+Note that all parameters are considered required unless a default value is provided. If you want to add a description to a data contracts property and/or mark it as required you can do so like:
+
+```csharp
+[OpenApiProperty(Description = "", Required = true)]
+```
+
+If you want to add a possible response to an operation you can do so like:
+
+```csharp
+[OpenApiResponse(ContentTypes = new[] { "" }, Description = "", StatusCode = HttpStatusCode.OK, Type = typeof(bla))]
+```
+
+Note that more than one OpenApiResponse attribute can be added to an operation. Additionally a default response will be added for you if you don't specify one.
+
+A fully working sample with the documentation attributes can be found [here](https://github.com/CoreWCF/CoreWCF/blob/c5baae784a3018cbd6d1cfa1c338df839c00fd1e/src/Samples/WebHttp/ExampleContract.cs).
+
+#### Configuring the Binding
+
+If you need to configure the binding you can do so like:
+
+```csharp
+builder.AddServiceWebEndpoint<WebApi, IWebApi>(new WebHttpBinding
+{
+}, "api", behavior =>
+{
+    behavior.HelpEnabled = true;
+});
+```
+
+#### Thanks
+
+Thank you to [Digimarc](https://www.digimarc.com) for sponsoring the porting of this feature.
