@@ -1,0 +1,118 @@
+---
+# Layout
+layout: post
+title:  "Introducing WSDL Support"
+date:   2022-04-26 13:00:00 -0800
+categories: release
+# Author
+author: Matt Connew
+---
+#### Introduction
+
+A feature which many have been waiting for in Core WCF is generation of the service WSDL. Strongly tied to this feature is the service debug behavior. When using these features, there are a few differences in behavior compared to WCF.
+
+#### ServiceDebugBehavior
+
+To enable the metadata behavior and/or the service debug behavior, you need to call `AddServiceModelMetadata`. In WCF, the ServiceDebugBehavior was always Enabled by default. Up until CoreWCF 1.0, this feature wasn't available. To avoid any surprises caused by serving a new web page when updating to the latest CoreWCF 1.0 packages, the ServiceDebugBehavior is not enabled by default. It is easily enabled with a small change. Let's start with defining out service contract and implementation.
+
+```csharp
+[ServiceContract]
+public interface IEchoService
+{
+	[OperationContract]
+	string Echo(string text);
+}
+```
+
+```csharp
+public class EchoService : IEchoService
+{
+	public string Echo(string text) => text;
+}
+```
+
+Now let's add the code to configure and get the service started.
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel((context, options) => { options.AllowSynchronousIO = true; });
+builder.Services.AddServiceModelServices()
+                .AddServiceModelMetadata();
+var app = builder.Build();
+
+app.UseServiceModel(builder =>
+{
+    builder.AddService<EchoService>(serviceOptions => { })
+           .AddServiceEndpoint<EchoService, IEchoService>(new BasicHttpBinding(), "/EchoService/basichttp");
+});
+app.Run();
+```
+
+Everything here looks the same as in previous releases except two small modifications. First is to add the metadata services to DI by calling `AddServiceModelMetadata()`. Second, the `AddService<TService>` method now has a delegate which accepts a ServiceOptions parameter. Using this overload enables the `ServiceDebugBehavior` and provides an easy method to modify the behavior. Here's the definition of the `ServiceOptions` class.
+
+```csharp
+namespace CoreWCF.Configuration
+{
+    public class ServiceOptions
+    {
+        public ServiceDebugBehavior DebugBehavior { get; }
+        public ICollection<Uri> BaseAddresses { get; }
+    }
+}
+```
+
+It has a couple of  properties:
+- The `DebugBehavior` property allows you to configure the `ServiceDebugBehavior`. For example, you can enable including the full exception details in automatically generated Fault messages. You would modify your service configuration code like this:
+
+```csharp
+    builder.AddService<EchoService>(serviceOptions =>
+    {
+        serviceOptions.DebugBehavior.IncludeExceptionDetailInFaults = true;
+    })
+```
+
+- The `BaseAddresses` property specifies the endpoint for the html help page, and as the base address for each service endpoint. Enabling the service debug behavior causes an html help page to be available. With WCF, this help page is generated when you make a GET request to the HTTP base address. 
+
+There isn't really a base address available when using ASP.NET Core so Core WCF uses the root URL as the base address. This is why you need to provide the full path to `AddServiceEndpoint`. Serving up a web page at the root path would be problematic if you have other middleware running on ASP.NET Core so we had to pick something else. We examine each of the service endpoints in turn and pick the first HTTP endpoint address to host the html page for HTTP requests, and do the same for HTTPS if enabled. This means in our example the service debug help page will be served from `/EchoService/basichttp`. WCF would have served the page at `/EchoService` as that would normally have been the base address. 
+
+As this is most likely the wrong behavior for your service, you can explicilty set your base addresses by adding your desired base address to `ServiceOptions.BaseAddresses`. This now causes the address you passed to `AddServiceEndpoint` to be treated as relative to the base address so that needs to be changed too. Your service configuration code would now look like this:
+
+```csharp
+app.UseServiceModel(builder =>
+{
+    builder.AddService<EchoService>(serviceOptions =>
+    {
+        serviceOptions.BaseAddresses.Add(new Uri("http://localhost/EchoService"));
+    })
+    .AddServiceEndpoint<EchoService, IEchoService>(new BasicHttpBinding(), "/basichttp");
+});
+```
+
+This will cause the service debug page to be available at the path `/EchoService` and the service endpoint to be available at `/EchoService/basichttp`. 
+
+The `BaseAddresses` property can be set on:
+- The `IServiceBuilder` interface, which would be applied to all configured services. 
+- The `ServiceOptions` class which enables you to configure different base addresses for each service.
+
+You can also configure the listening address by setting `ServiceOptions.DebugBehavior.HttpHelpPageUrl`. If you want the service debug behavior to function for HTTPS requests, you need to have a service endpoint listening on HTTPS and then you can set `ServiceOptions.DebugBehavior.HttpsHelpPageEnabled` to true. There is a corresponding `HttpsHelpPageUrl` property to override the Url for the HTTPS help page.
+
+If you are following along testing this feature, you may have noticed that the help page looks identical to the WCF help page and provides the help content that you would expect for configuring WCF on .NET Framework. This may seem unusual, but this is for compatibility reasons. We received very specific feedback that some companies use the help page for automatic health check systems and look for specific text to appear on the page. If a service has failed to start for some reason, WCF hosted in IIS/ASP.NET will still serve an html page with different content explaining the failed service startup. Keeping the help page text identical to WCF enables switching to CoreWCF without the need to modify any existing infrastucture which depends on this page as a basic service health check.
+
+#### ServiceMetadataBehavior
+
+To enable exporting the service WSDL, in addition to calling `AddServiceModelMetadata()`, you also need to enable getting the WSDL. Calling `AddServiceModelMetadata()` adds the behavior `ServiceMetadataBehavior` to DI as a Singleton which automatically gets picked up by CoreWCF when creating the service dispatcher. To make any changes to `ServiceMetadataBehavior`, you can request it from DI and make any changes. For example, you can add the following code to your service configuration:
+
+```csharp
+var serviceMetadataBehavior = app.Services.GetRequiredService<CoreWCF.Description.ServiceMetadataBehavior>();
+serviceMetadataBehavior.HttpGetEnabled = true;
+```
+
+This enables the WSDL to be served via HTTP. Service metadata has the same behavior for its listening Url that service debug behavior has. The same  mechanisms work to change which address the WSDL will be available from. 
+
+There is one more change you are likely to want to make to have CoreWCF modify the generated help page and WSDL document to reflect the hostname and port number that the request came from. This can be done by adding `UseRequestHeadersForMetadataAddressBehavior` to DI like this:
+
+```csharp
+builder.Services.AddSingleton<IServiceBehavior, UseRequestHeadersForMetadataAddressBehavior>();
+```
+
+This is useful when the machine hostname is different than the hostname that a client uses to connect to the service. For example, if the service is running in a docker container or behind a load balancer. Without this change, the default is to use the hostname from the base addresses. Unless you have modified the base address, this will use the hostname `localhost`. This isn't very useful for a remote machine trying to download the WSDL, so you will generally want to add this line to enable this feature.
