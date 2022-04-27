@@ -8,12 +8,12 @@ categories: release
 author: Biroj Nayak (https://github.com/birojnayak)
 ---
 #### Introduction
-With new V1.0.0 CoreWCF release, CoreWCF would support WS-Federation protocol via WS2007FederationHttpBinding/WSFederationHttpBinding. With this release the support for WS-Federation will be for SAML subject confirmation restricted to Bearer key, support for SymmetricKey and AsymmetricKey will be in later releases based on customer demand.
+With the new V1.0.0 CoreWCF release, CoreWCF will support the WS-Federation protocol via WS2007FederationHttpBinding/WSFederationHttpBinding. With this release the support for WS-Federation will be for SAML subject confirmation restricted to Bearer key. Later support for SymmetricKey and AsymmetricKey will be in based on customer demand.
 
 ### What has changed between WCF and CoreWCF
-If you are an application developer you won't see much changes the way to initialize binding and call to the service. One thing to note that, for initializing IdentityConfiguration, first get it  Service Credentials(as showed in below code) from host and add your validations details. This was needed to support EstablishSecurityContext(true) across platforms(Linux/Windows), as support for System.Security.Cryptography/ProtectedData was limited to Windows and we had to use IDataProtectionProvider interface of Microsoft.AspNetCore.DataProtection.
+If you are an application developer, you won't see much change in the way you initialize the binding and call the service. If you are configuring your service using IdentityConfiguration, you can no longer directly instantiate this class. The easiest way to configure CoreWCF using IdentityConfiguration is to use the ConfigureServiceHostBase method. You first get the ServiceCredentials from the ServiceHostBase and then retrieve the IdentityConfiguration from there. As shown in the following code, this is how you can configure your token validation. With many scenarios, WCF will use [ProtectedData](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.protecteddata?view=dotnet-plat-ext-6.0) to secure the session information. Unfortunately this is a Windows only technology and doesn't work cross platform which meant CoreWCF needed an alternative encryption technology. CoreWCF now uses the new [Data Protection](https://docs.microsoft.com/en-us/aspnet/core/security/data-protection/introduction?view=aspnetcore-6.0) API's which need to be configured using DI. This makes it easier to use load balancing with WS-Federation services as you can now use Data Protection to configure encrypting the session state with shared keys.
 
-Inside the CoreWCF framework, we have removed most of the code from System.Identity.Model by invoking Microsoft.IdentityModel.* API(which is a cross platform compatible package). Meaning the SAML that's client send from Idp is send to Microsoft.IdentityModel via CoreWCF framework to validate, aferwards any validations which were specific to WCF are still done at CoreWCF. We have kept all public extension points of WS-Federation same as WCF to make porting easy for devs.
+Inside CoreWCF, we decided to not port the existing System.IdentityModel implementation of SAML security token handlers and instead have wrapped the implementation provided by the newer Microsoft.IdentityModel.* APIs. This enables us to benefit from security fixes and updates from the Microsoft Identity team which has area experts dedicated to the task. After the Microsoft.IdentityModel libraries have validated a SAML token, we still do additional validation checks which were specific to WCF which maintains the same behavior. We have kept all public extension points of WS-Federation same as WCF to make porting as easy as possible.
 
 #### Getting Started
 
@@ -67,4 +67,4 @@ internal class StartupWSHttpFedBase
 
 #### Thanks
 
-Thanks to AWS(https://aws.amazon.com/blogs/opensource/category/programing-language/dot-net/) for supporting this project since last 2 years.
+Thanks to AWS(https://aws.amazon.com/blogs/opensource/category/programing-language/dot-net/) for supporting this project since last 2 years. AWS will be publishing a blog post on how to use Okta/ADFS integrated with AWS STS to provide authentication for your CoreWCF service. We'll provide a link here once it's published.
