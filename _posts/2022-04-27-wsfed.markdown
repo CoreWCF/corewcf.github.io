@@ -1,0 +1,70 @@
+---
+# Layout
+layout: post
+title:  "Introducing WS2007FederationHttpBinding/WSFederationHttpBinding Support"
+date:   2022-04-27 13:00:00 -0800
+categories: release
+# Author
+author: Biroj Nayak (https://github.com/birojnayak)
+---
+#### Introduction
+With new V1.0.0 CoreWCF release, CoreWCF would support WS-Federation protocol via WS2007FederationHttpBinding/WSFederationHttpBinding. With this release the support for WS-Federation will be for SAML subject confirmation restricted to Bearer key, support for SymmetricKey and AsymmetricKey will be in later releases based on customer demand.
+
+### What has changed between WCF and CoreWCF
+If you are an application developer you won't see much changes the way to initialize binding and call to the service. One thing to note that, for initializing IdentityConfiguration, first get it  Service Credentials(as showed in below code) from host and add your validations details. This was needed to support EstablishSecurityContext(true) across platforms(Linux/Windows), as support for System.Security.Cryptography/ProtectedData was limited to Windows and we had to use IDataProtectionProvider interface of Microsoft.AspNetCore.DataProtection.
+
+Inside the CoreWCF framework, we have removed most of the code from System.Identity.Model by invoking Microsoft.IdentityModel.* API(which is a cross platform compatible package). Meaning the SAML that's client send from Idp is send to Microsoft.IdentityModel via CoreWCF framework to validate, aferwards any validations which were specific to WCF are still done at CoreWCF. We have kept all public extension points of WS-Federation same as WCF to make porting easy for devs.
+
+#### Getting Started
+
+The way to initialize service is
+
+```csharp
+internal class StartupWSHttpFedBase
+    {
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddServiceModelServices();
+        }
+
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        {
+            WS2007FederationHttpBinding wsFedBinding = new WS2007FederationHttpBinding(WSFederationHttpSecurityMode.TransportWithMessageCredential);
+                app.UseServiceModel(builder =>
+                {
+                    builder.AddService<Services.EchoService>();
+                    builder.AddServiceEndpoint<Services.EchoService, ServiceContract.IEchoService>(wsFedBinding, "/wsFedHttp");
+                    builder.ConfigureServiceHostBase<Services.EchoService>(host => ChangeHostBehavior(host, wsFedBinding));
+                });
+        }
+
+        public void ChangeHostBehavior(ServiceHostBase host, WS2007FederationHttpBinding wsHttpFed)
+        {
+            wsHttpFed.Security.Message.IssuerAddress = new EndpointAddress("https://youradserver/adfs/services/trust/13/usernamemixed");
+            wsHttpFed.Security.Message.IssuerMetadataAddress = new EndpointAddress("https://youradserver/adfs/services/trust/mex");
+            wsHttpFed.Security.Message.EstablishSecurityContext = true; //this is supported
+            wsHttpFed.Security.Message.IssuedKeyType = SecurityKeyType.BearerKey;
+            ServiceBehaviorAttribute sb = new ServiceBehaviorAttribute();
+            host.Credentials.ServiceCertificate.SetCertificate(StoreLocation.CurrentUser,
+                StoreName.Root, X509FindType.FindByThumbprint,"CERTIFICATETHUMBPRINT");
+            //host.Credentials.ClientCertificate.Authentication.RevocationMode = X509RevocationMode.NoCheck;
+            host.Credentials.UseIdentityConfiguration = true;  //if you want support for both SAML versions(1.1,2.0), set this to true
+            // host.Credentials.ClientCertificate. = X509RevocationMode.NoCheck;
+            IdentityConfiguration identityConfiguration = host.Credentials.IdentityConfiguration; // this is important, as it sets proper 
+            identityConfiguration.AudienceRestriction.AllowedAudienceUris.Add(new Uri("https://corewcfserver:8443/wsFedHttp"));
+            //identityConfiguration.CertificateValidationMode = X509CertificateValidationMode.None; // ensure proper validation
+            //identityConfiguration.RevocationMode = X509RevocationMode.NoCheck;
+            ConfigurationBasedIssuerNameRegistry configurationBasedIssuerNameRegistry = new ConfigurationBasedIssuerNameRegistry();
+            configurationBasedIssuerNameRegistry.AddTrustedIssuer("C8A9BB79679B901ACEB4F36C7EC35AECC861838C".ToLower(), "http://youradserver/adfs/services/trust");
+            identityConfiguration.IssuerNameRegistry = configurationBasedIssuerNameRegistry;
+            //identityConfiguration.SaveBootstrapContext = false; // you can set to true, if you want the Token in any of your extension method
+            host.Credentials.IdentityConfiguration = identityConfiguration;
+        }
+    }
+```
+
+
+#### Thanks
+
+Thanks to AWS(https://aws.amazon.com/blogs/opensource/category/programing-language/dot-net/) for supporting this project since last 2 years.
