@@ -1,0 +1,70 @@
+---
+# Layout
+layout: post
+title:  "Introducing WS2007FederationHttpBinding/WSFederationHttpBinding Support"
+date:   2022-04-27 13:00:00 -0800
+categories: release
+# Author
+author: Biroj Nayak (https://github.com/birojnayak)
+---
+#### Introduction
+With the new V1.0.0 CoreWCF release, CoreWCF will support the WS-Federation protocol via WS2007FederationHttpBinding/WSFederationHttpBinding. This release is only targeting support for SAML bearer assertion tokens. Later support for SymmetricKey and AsymmetricKey will be added based on customer demand.
+
+### What has changed between WCF and CoreWCF
+If you are an application developer, you won't see much change in the way you initialize the binding and call the service. If you are configuring your service using IdentityConfiguration, you can no longer directly instantiate this class. The easiest way to configure CoreWCF using IdentityConfiguration is to use the ConfigureServiceHostBase method. You first get the ServiceCredentials from the ServiceHostBase and then retrieve the IdentityConfiguration from there. As shown in the following code, this is how you can configure your token validation. With many scenarios, WCF will use [ProtectedData](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.protecteddata?view=dotnet-plat-ext-6.0) to secure the session information. Unfortunately this is a Windows only technology and doesn't work cross platform which meant CoreWCF needed an alternative encryption technology. CoreWCF now uses the new [Data Protection](https://docs.microsoft.com/en-us/aspnet/core/security/data-protection/introduction?view=aspnetcore-6.0) API's which need to be configured using DI. This makes it easier to use load balancing with WS-Federation services as you can now use Data Protection to configure encrypting the session state with shared keys.
+
+Inside CoreWCF, we decided to not port the existing System.IdentityModel implementation of SAML security token handlers and instead have wrapped the implementation provided by the newer Microsoft.IdentityModel.* APIs. This enables us to benefit from security fixes and updates from the Microsoft Identity team which has area experts dedicated to the task. After the Microsoft.IdentityModel libraries have validated a SAML token, we still do additional validation checks which were specific to WCF which maintains the same behavior. We have kept all public extension points of WS-Federation same as WCF to make porting as easy as possible.
+
+#### Getting Started
+
+The way to initialize service is
+
+```csharp
+internal class StartupWSHttpFedBase
+    {
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddServiceModelServices();
+        }
+
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        {
+            WS2007FederationHttpBinding wsFedBinding = new WS2007FederationHttpBinding(WSFederationHttpSecurityMode.TransportWithMessageCredential);
+                app.UseServiceModel(builder =>
+                {
+                    builder.AddService<Services.EchoService>();
+                    builder.AddServiceEndpoint<Services.EchoService, ServiceContract.IEchoService>(wsFedBinding, "/wsFedHttp");
+                    builder.ConfigureServiceHostBase<Services.EchoService>(host => ChangeHostBehavior(host, wsFedBinding));
+                });
+        }
+
+        public void ChangeHostBehavior(ServiceHostBase host, WS2007FederationHttpBinding wsHttpFed)
+        {
+            wsHttpFed.Security.Message.IssuerAddress = new EndpointAddress("https://youradserver/adfs/services/trust/13/usernamemixed");
+            wsHttpFed.Security.Message.IssuerMetadataAddress = new EndpointAddress("https://youradserver/adfs/services/trust/mex");
+            wsHttpFed.Security.Message.EstablishSecurityContext = true; //this is supported
+            wsHttpFed.Security.Message.IssuedKeyType = SecurityKeyType.BearerKey;
+            ServiceBehaviorAttribute sb = new ServiceBehaviorAttribute();
+            host.Credentials.ServiceCertificate.SetCertificate(StoreLocation.CurrentUser,
+                StoreName.Root, X509FindType.FindByThumbprint,"CERTIFICATETHUMBPRINT");
+            //host.Credentials.ClientCertificate.Authentication.RevocationMode = X509RevocationMode.NoCheck;
+            host.Credentials.UseIdentityConfiguration = true;  //if you want support for both SAML versions(1.1,2.0), set this to true
+            // host.Credentials.ClientCertificate. = X509RevocationMode.NoCheck;
+            IdentityConfiguration identityConfiguration = host.Credentials.IdentityConfiguration; // this is important, as it sets proper 
+            identityConfiguration.AudienceRestriction.AllowedAudienceUris.Add(new Uri("https://corewcfserver:8443/wsFedHttp"));
+            //identityConfiguration.CertificateValidationMode = X509CertificateValidationMode.None; // ensure proper validation
+            //identityConfiguration.RevocationMode = X509RevocationMode.NoCheck;
+            ConfigurationBasedIssuerNameRegistry configurationBasedIssuerNameRegistry = new ConfigurationBasedIssuerNameRegistry();
+            configurationBasedIssuerNameRegistry.AddTrustedIssuer("C8A9BB79679B901ACEB4F36C7EC35AECC861838C".ToLower(), "http://youradserver/adfs/services/trust");
+            identityConfiguration.IssuerNameRegistry = configurationBasedIssuerNameRegistry;
+            //identityConfiguration.SaveBootstrapContext = false; // you can set to true, if you want the Token in any of your extension method
+            host.Credentials.IdentityConfiguration = identityConfiguration;
+        }
+    }
+```
+
+
+#### Thanks
+
+Thanks to AWS(https://aws.amazon.com/blogs/opensource/category/programing-language/dot-net/) for supporting this project since last 2 years. AWS will be publishing a blog post on how to use Okta/ADFS integrated with AWS STS to provide authentication for your CoreWCF service. We'll provide a link here once it's published.
