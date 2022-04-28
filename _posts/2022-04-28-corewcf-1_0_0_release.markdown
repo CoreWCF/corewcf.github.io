@@ -25,7 +25,9 @@ Missing features fall into two categories.
 
 When the implementation is there but not public, it's because we don't have tests for it yet. Making an API public without having tested that there are no problems with any changes made in the port will lead to a lot of noise and bad experiences. If you discover there's an extensibility point that you need which is internal, the fastest way to get it supported is to submit a PR making it public along with some tests verifying that the extensibility point is working as expected.  
 
-If the feature you need is completely absent, you have two options. The first option is to check to see if it's on the feature roadmap issue [here](https://github.com/CoreWCF/CoreWCF/issues/234) and if it isn't, add it. Then upvote the feature following the instructions at the top of the issue. We strongly weight demand when deciding on which feature to work on next. The second option is to contribute developer resources to porting the feature. The WebHttp feature is an example of this happening. Porting WebHttpBinding was too far down the priority list for one company which needed it so with some guidance, they ported the feature.  
+If the feature you need is completely absent, you have two options: 
+- The first option is to check to see if it's on the [feature roadmap issue](https://github.com/CoreWCF/CoreWCF/issues/234) and if it isn't, add it. Then upvote the feature following the instructions at the top of the issue. We strongly weight demand when deciding on which feature to work on next. 
+- The second option is to contribute developer resources to porting the feature. The WebHttp feature is an example of this happening. Porting WebHttpBinding was too far down the priority list for one customer which needed it, so with some guidance, they ported the feature.  
 
 Another alternative might be to modify your service to use a different feature which provides the same capabilities. For example, switching to NetTcpBinding if you are currently using NetNamedPipeBinding.
 
