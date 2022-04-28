@@ -45,5 +45,5 @@ There are 3 new blog posts talking about some of these new features:
 -[WS-Federation support](https://corewcf.github.io/blog/2022/04/27/wsfed)  
 
 #### Official Microsoft support
-With the v1.0.0 release of Core WCF, Microsoft are providing support. The current support lifecycle can be found at [http://aka.ms/corewcf/support](http://aka.ms/corewcf/support). Microsoft has published a blog post explaining the support policy for Core WCF.
+With the v1.0.0 release of Core WCF, Microsoft are providing support. The current support lifecycle can be found at [http://aka.ms/corewcf/support](http://aka.ms/corewcf/support). Microsoft has published a [blog post](https://devblogs.microsoft.com/dotnet/corewcf-v1-released) explaining the support policy for Core WCF.
 	
