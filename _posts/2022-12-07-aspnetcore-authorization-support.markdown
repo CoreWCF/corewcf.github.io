@@ -24,18 +24,29 @@ To setup this feature in your CoreWCF application you should follow the below st
 1. Register authentication infrastructure services and configure JWT Bearer authentication middleware as default `AuthenticationScheme`. (Internally CoreWCF is calling `HttpContext.AuthenticateAsync()` with the default registered authentication scheme).
 ```csharp
 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-.AddJwtBearer(options => 
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options => 
 {
     options.Authority = "https://authorization-server-uri";
     options.Audience = "my-audience";
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        RequireSignedTokens = true,
+    };
 });
 ```
 2. Register authorization infrastructure services and policies.
 ```csharp
 services.AddAuthorization(options => 
 {
-    options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme).RequireClaim("scope", "read").Build();
-    options.AddPolicy("WritePolicy", new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme).RequireClaim("scope", "write").Build());
+    options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireClaim("scope", "read")
+        .Build();
+    options.AddPolicy("WritePolicy", new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireClaim("scope", "write")
+        .Build());
 })
 ```
 3. Configure your service to use ASP.NET Core Authentication and Authorization middlewares setting the `ClientCredentialType` to `HttpClientCredentialType.InheritedFromHost`.
