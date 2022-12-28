@@ -21,7 +21,16 @@ To enable a seamless developer experience we brought the ability to decorate an 
 We did not bring support of the `[AllowAnonymous]` attribute as we believe that a strong interface segregation between anonymous and secured operations should be set. Moreover supporting this attribute would imply delaying the authentication step in the pipeline leading to potential DoS vulnerabilities. Decorating an `OperationContract` implementation with `[AllowAnonymous]` will have no effect and will trigger a build warning `COREWCF_0200`.
 ### Configuration
 To setup this feature in your CoreWCF application you should follow the below steps. I'm assuming that we want to enforce clients authenticating using a JWT Bearer token issued by an authorization server `https://authorization-server-uri`, the service should be protected by the audience `my-audience` and two policies should be defined, one requiring a scope `read` and another one requiring a scope `write`.
-1. Register authentication infrastructure services and configure JWT Bearer authentication middleware as default `AuthenticationScheme`. (Internally CoreWCF is calling `HttpContext.AuthenticateAsync()` with the default registered authentication scheme).
+1. Install JWT Bearer authentication package
+```xml
+<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.12" />
+```
+*Note: Due to this [issue](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/issues/1792), you have to explicitly reference the latest version of `Microsoft.IdentityModel.Protocols.OpenIdConnect` after installing `Microsoft.AspNetCore.Authentication.JwtBearer`*.
+```xml
+<PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.25.1" />
+```
+ 2. Register authentication infrastructure services and configure JWT Bearer authentication middleware as default `AuthenticationScheme`. (Internally CoreWCF is calling `HttpContext.AuthenticateAsync()` with the default registered authentication scheme).
+
 ```csharp
 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options => 
@@ -36,20 +45,25 @@ services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         RequireSignedTokens = true,
     };
 });
+
 ```
-2. Register authorization infrastructure services and policies.
+
+
+3. Register authorization infrastructure services and policies.
 ```csharp
 services.AddAuthorization(options => 
 {
     options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
         .RequireClaim("scope", "read")
         .Build();
     options.AddPolicy("WritePolicy", new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
         .RequireClaim("scope", "write")
         .Build());
 })
 ```
-3. Configure your service to use ASP.NET Core Authentication and Authorization middlewares setting the `ClientCredentialType` to `HttpClientCredentialType.InheritedFromHost`.
+4. Configure your service to use ASP.NET Core Authentication and Authorization middlewares setting the `ClientCredentialType` to `HttpClientCredentialType.InheritedFromHost`.
 ```csharp
 app.UseServiceModel(builder =>
 {
@@ -67,7 +81,7 @@ app.UseServiceModel(builder =>
     }, "/BasicWcfService/basichttp.svc");
 }
 ```
-4. Decorate your service implementation
+5. Decorate your service implementation
 ```csharp
 [ServiceContract]
 public interface ISecuredService
