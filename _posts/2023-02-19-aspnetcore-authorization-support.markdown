@@ -2,7 +2,7 @@
 # Layout
 layout: post
 title:  "Introducing ASP.NET Core Authorization support and modernization of legacy WCF Authentication and Authorization APis"
-date:   2022-12-16 07:00:00 +0100
+date:   2023-02-19 07:00:00 +0100
 categories: release
 # Author
 author: Guillaume Delahaye (https://github.com/g7ed6e)
@@ -107,6 +107,10 @@ ASP.NET Core Authorization policies support is implemented in http based binding
 - `BasicHttpBinding`
 - `WSHttpBinding`
 - `WebHttpBinding`
+
+### FallbackPolicy support
+
+ASP.NET Core 3.0 introduced a `FallbackPolicy`. This authorization policy is executed when no policy is configured for a given endpoint. As CoreWCF does not expose its endpoints to the endpoint routing infrastructure, this policy may be executed depending on the configured request pipeline. To avoid the FallbackPolicy being executed the call to CoreWCF middleware (i.e `UserServiceModel(...)`should occur before the call to the authorization middleware `UseAuthorization(...)`.
 
 ### Authorization evaluation position in CoreWCF request pipeline
 
