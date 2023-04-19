@@ -128,7 +128,7 @@ Another impact is that authorization will now run on a captured `Synchronization
 
 Having `ClientCredentialType` set to `InheritedFromHost` disables the execution of an authorization logic implemented in `ServiceAuthorizationManager`.
 
-### `ServiceAuthenticationManager` and `ServiceAuthorizationManager` API modernization
+### ServiceAuthenticationManager and ServiceAuthorizationManager API modernization
 
 These two classes now have async versions of the virtual methods which you can override. The existing synchronous method have been deprecated using the `Obsolete` attribute and will cause a build warning if you override them. If you are overriding one of the existing synchronous virtual methods, your code will continue to function the same as it always has and will continue to do so for all future 1.x releases. The synchronous variations of the methods will likely be removed in a future 2.x release. You can safely suppress the build warning until you have migrated your implementation to the async methods.
 
