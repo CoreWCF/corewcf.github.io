@@ -5,7 +5,7 @@ title:  "Introducing AWS SQS binding extension support in CoreWCF and WCF Client
 date:   2023-10-01 13:00:00 -0800
 categories: release
 # Author
-author: Abhi Gujjewar, Biroj Nayak(https://github.com/birojnayak) , PJ Pittle (https://github.com/ppittle)
+author: Abhi Gujjewar, Biroj Nayak(https://github.com/birojnayak), PJ Pittle(https://github.com/ppittle)
 ---
 # Introduction
 AWS has published two NuGet packages, AWS.CoreWCF.Extensions (server side) and AWS.WCF.Extensions (client side), to enable WCF clients and CoreWCF services to communicate via AWS SQS Queue Transport. This is primarily to enable users to migrate services using MSMQ binding from on-premises to cloud. With AWS SQS transport binding, customers can send SOAP messages to AWS SQS via the WCF client and run CoreWCF services to receive and process those messages without changing any contract or service implementations.
@@ -58,12 +58,12 @@ public class Program
             services.AddServiceModelServices();
             services.AddQueueTransport();
 
-            //Additional info needed for AWS
+            // AWS Configuration
             AWSOptions option = new AWSOptions();
             option.Credentials = new BasicAWSCredentials("your access key", "your secret key");
             services.AddDefaultAWSOptions(option);
             services.AddSQSClient(_queueName);
-            //end of it
+            //end of AWS Configuration
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
