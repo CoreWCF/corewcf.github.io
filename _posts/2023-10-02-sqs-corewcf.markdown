@@ -2,7 +2,7 @@
 # Layout
 layout: post
 title:  "Introducing AWS SQS binding extension support in CoreWCF and WCF Client"
-date:   2023-10-01 13:00:00 -0800
+date:   2023-10-02 18:00:00 -0800
 categories: release
 # Author
 author: Abhi Gujjewar(https://github.com/abhi-guj), Biroj Nayak(https://github.com/birojnayak), PJ Pittle(https://github.com/ppittle)
