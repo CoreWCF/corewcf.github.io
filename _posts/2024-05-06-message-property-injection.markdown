@@ -8,7 +8,7 @@ categories: release
 author: Guillaume Delahaye (https://github.com/g7ed6e)
 ---
 ### Introduction
-The CoreWCF 1.6.0 release introduced a new feature that allows to inject incoming message properties as operation contract parameter.
+The CoreWCF 1.6.0 release introduced a new feature that enables injecting incoming message properties as operation contract parameters.
 
 ### Implementation
 This feature is implemented in the `OperationContractParameterGenerator` which already support injecting service registered in the DI container or `HttpContext` into the operation contract parameters.
