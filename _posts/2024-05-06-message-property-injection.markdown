@@ -42,7 +42,7 @@ public class HelloWorldService : IHelloService
 }
 ```
 ### BasicHttpBinding usage
-A service exposing a `BasicHttpBinding` can pull the `HttpRequestMessageProperty`.
+A service exposing a `BasicHttpBinding` can inject the `HttpRequestMessageProperty`.
 
 ```c#
 public interface IHelloWorldService
