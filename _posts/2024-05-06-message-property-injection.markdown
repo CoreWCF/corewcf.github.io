@@ -113,7 +113,7 @@ using (var scope = new System.ServiceModel.OperationContextScope((System.Service
     channel.DoSomething();
 }
 ```
-Service side the implementer can get these values back by pulling the `KafkaLessageProperty`
+Service side the implementer can get these values back by injecting the `KafkaMessageProperty`
 ```c#
 public void DoSomething([Injected(PropertyName = KafkaMessageProperty.Name)] KafkaMessageProperty kafkaMessageProperty)
 {
