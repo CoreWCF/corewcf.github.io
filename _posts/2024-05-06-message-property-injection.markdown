@@ -25,7 +25,7 @@ namespace CoreWCF
 ```
 ### NetTcpBinding usage
 
-A service exposing a `NetTcpBinding` can pull the `RemoteEndpointMessageProperty`.
+A service exposing a `NetTcpBinding` can inject the `RemoteEndpointMessageProperty`.
 
 ```c#
 public interface IHelloWorldService
