@@ -2,7 +2,7 @@
 # Layout
 layout: post
 title:  "Add IncomingMessageProperty injection support anf Kafka transport enhancements in CoreWCF"
-date:   2024-07-06 13:00:00 +0200
+date:   2024-08-23 13:00:00 +0200
 categories: release
 # Author
 author: Guillaume Delahaye (https://github.com/g7ed6e)
