@@ -30,7 +30,15 @@ github_username:  CoreWCF
 theme: minima
 plugins:
   - jekyll-feed
+  - jekyll-seo-tag
+
+header_pages:
   
+minima:
+  social_links:
+    - { platform: github, user_url: "https://github.com/CoreWCF/CoreWCF" }
+    - { platform: x, user_url: "https://x.com/corewcf_" }
+    
 markdown: GFM
 permalink: /blog/:year/:month/:day/:title
 
