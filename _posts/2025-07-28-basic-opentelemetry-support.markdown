@@ -2,7 +2,7 @@
 # Layout
 layout: post
 title:  "Basic OpenTelemetry support"
-date:   2025-07-21 12:00:00 -0800
+date:   2025-07-28 12:00:00 -0800
 categories: release
 # Author
 author: Stefan Nikolei(https://github.com/stefannikolei)
@@ -100,13 +100,13 @@ This tells OpenTelemetry to listen for traces emitted by the CoreWCF instrumenta
 
 Once configured, your CoreWCF service will automatically start emitting detailed traces for all service operations. Here's what the traces look like for our calculator service:
 
-![OpenTelemetry Traces](/_images/traces.png)
+![OpenTelemetry Traces](/assets/images/traces.png)
 
 ### Comparison: With vs Without CoreWCF Instrumentation
 
 For comparison, here are the same service calls, traced with only the standard ASP.NET Core instrumentation (using `AddAspNetCoreInstrumentation()` instead of `AddSource("CoreWCF.Primitives")`):
 
-![Standard Traces](/_images/traces_no_detail.png)
+![Standard Traces](/assets/images/traces_no_detail.png)
 
 As you can see, the CoreWCF-specific instrumentation provides much richer details about WCF operation execution, including operation names, binding information, and service-specific context that's not available with the standard instrumentation.
 
